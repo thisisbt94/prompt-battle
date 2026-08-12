@@ -1,0 +1,556 @@
+{
+  "name": "Prompt Battle — ILMU Webhook",
+  "nodes": [
+    {
+      "id": "webhook1",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -300,
+        300
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "prompt-battle",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "config1",
+      "name": "Config (edit me)",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -60,
+        300
+      ],
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "sharedSecret",
+              "value": "PASTE-YOUR-N8N_SHARED_SECRET-HERE",
+              "type": "string"
+            },
+            {
+              "id": "a2",
+              "name": "ilmuApiUrl",
+              "value": "https://api.ilmu.ai/v1",
+              "type": "string"
+            },
+            {
+              "id": "a3",
+              "name": "ilmuApiKey",
+              "value": "PASTE-YOUR-ILMU_API_KEY-HERE",
+              "type": "string"
+            },
+            {
+              "id": "a4",
+              "name": "ilmuModel",
+              "value": "ilmu-v3.1",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "authcheck1",
+      "name": "Auth Check",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        180,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "authcheck1-c1",
+              "leftValue": "={{ $json.headers['x-agent-token'] }}",
+              "rightValue": "={{ $('Config (edit me)').first().json.sharedSecret }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "unauthorized1",
+      "name": "Unauthorized",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        420,
+        500
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"success\": false, \"error\": \"Invalid or missing x-agent-token\" } }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "ishealth1",
+      "name": "Is Health Check?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        420,
+        100
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "ishealth1-c1",
+              "leftValue": "={{ $json.body.action }}",
+              "rightValue": "health",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "healthok1",
+      "name": "Health OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        660,
+        40
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"success\": true, \"status\": \"online\" } }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "isgenerate1",
+      "name": "Is Generate?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        660,
+        220
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "isgenerate1-c1",
+              "leftValue": "={{ $json.body.action }}",
+              "rightValue": "generate",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "isjudge1",
+      "name": "Is Judge?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        900,
+        380
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "isjudge1-c1",
+              "leftValue": "={{ $json.body.action }}",
+              "rightValue": "judge",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "unknownaction1",
+      "name": "Unknown Action",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1140,
+        520
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"success\": false, \"error\": \"Unknown action: \" + $json.body.action } }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "buildgen1",
+      "name": "Build Generate Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        900,
+        160
+      ],
+      "parameters": {
+        "language": "javaScript",
+        "jsCode": "const cfg = $('Config (edit me)').first().json;\nconst body = $('Webhook').first().json.body;\n\nreturn [{\n  json: {\n    url: `${cfg.ilmuApiUrl}/chat/completions`,\n    apiKey: cfg.ilmuApiKey,\n    payload: {\n      model: cfg.ilmuModel,\n      temperature: 0.7,\n      max_tokens: 500,\n      messages: [\n        { role: 'system', content: \"You are ILMU, a helpful, concise workplace AI assistant. Answer the person's instruction directly and usefully. Keep it practical and under 180 words unless the instruction clearly calls for more.\" },\n        { role: 'user', content: `Challenge context: ${body.challenge}\\n\\nInstruction: ${body.prompt}` }\n      ]\n    }\n  }\n}];"
+      }
+    },
+    {
+      "id": "callilmugen1",
+      "name": "Call ILMU (Generate)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1140,
+        160
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.apiKey }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.payload }}",
+        "options": {
+          "timeout": 18000
+        }
+      }
+    },
+    {
+      "id": "formatgen1",
+      "name": "Format Generate Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1380,
+        160
+      ],
+      "parameters": {
+        "language": "javaScript",
+        "jsCode": "const content = $input.first().json?.choices?.[0]?.message?.content;\nreturn [{ json: { success: true, response: content ?? '' } }];"
+      }
+    },
+    {
+      "id": "respondgen1",
+      "name": "Respond Generate",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1620,
+        160
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "buildjudge1",
+      "name": "Build Judge Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1140,
+        400
+      ],
+      "parameters": {
+        "language": "javaScript",
+        "jsCode": "const cfg = $('Config (edit me)').first().json;\nconst body = $('Webhook').first().json.body;\nconst judgeSystemPrompt = \"You are the judge for \\\"Prompt Battle\\\", a live conference activity. Two people wrote two different instructions (\\\"prompts\\\") for the same AI, in response to the same challenge. You will be given the challenge, both prompts, and both AI-generated responses.\\n\\nJudge which RESPONSE is more useful \\u2014 relevance, clarity, usefulness, understanding of context, specificity, and practicality. Do NOT reward a prompt just for being longer.\\n\\nReply with ONLY a JSON object, no preamble, no markdown fences, in exactly this shape:\\n{\\\"winner\\\":\\\"A\\\"|\\\"B\\\"|\\\"TIE\\\",\\\"scoreA\\\":0-100,\\\"scoreB\\\":0-100,\\\"reason\\\":\\\"one short sentence\\\",\\\"promptATips\\\":[\\\"...\\\",\\\"...\\\"],\\\"promptBTips\\\":[\\\"...\\\",\\\"...\\\"],\\\"lesson\\\":\\\"one short, general, teachable sentence about what made the stronger prompt work\\\"}\";\n\nreturn [{\n  json: {\n    url: `${cfg.ilmuApiUrl}/chat/completions`,\n    apiKey: cfg.ilmuApiKey,\n    payload: {\n      model: cfg.ilmuModel,\n      temperature: 0,\n      max_tokens: 400,\n      messages: [\n        { role: 'system', content: judgeSystemPrompt },\n        { role: 'user', content: JSON.stringify({\n            challenge: body.challenge,\n            promptA: body.promptA,\n            responseA: body.responseA,\n            promptB: body.promptB,\n            responseB: body.responseB\n          })\n        }\n      ]\n    }\n  }\n}];"
+      }
+    },
+    {
+      "id": "callilmujudge1",
+      "name": "Call ILMU (Judge)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1380,
+        400
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.apiKey }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.payload }}",
+        "options": {
+          "timeout": 18000
+        }
+      }
+    },
+    {
+      "id": "formatjudge1",
+      "name": "Format Judge Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1620,
+        400
+      ],
+      "parameters": {
+        "language": "javaScript",
+        "jsCode": "const content = $input.first().json?.choices?.[0]?.message?.content;\nreturn [{ json: { success: true, response: content ?? '' } }];"
+      }
+    },
+    {
+      "id": "respondjudge1",
+      "name": "Respond Judge",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1860,
+        400
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Config (edit me)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config (edit me)": {
+      "main": [
+        [
+          {
+            "node": "Auth Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Auth Check": {
+      "main": [
+        [
+          {
+            "node": "Is Health Check?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Unauthorized",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Health Check?": {
+      "main": [
+        [
+          {
+            "node": "Health OK",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Is Generate?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Generate?": {
+      "main": [
+        [
+          {
+            "node": "Build Generate Request",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Is Judge?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Judge?": {
+      "main": [
+        [
+          {
+            "node": "Build Judge Request",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Unknown Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Generate Request": {
+      "main": [
+        [
+          {
+            "node": "Call ILMU (Generate)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call ILMU (Generate)": {
+      "main": [
+        [
+          {
+            "node": "Format Generate Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Generate Response": {
+      "main": [
+        [
+          {
+            "node": "Respond Generate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Judge Request": {
+      "main": [
+        [
+          {
+            "node": "Call ILMU (Judge)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call ILMU (Judge)": {
+      "main": [
+        [
+          {
+            "node": "Format Judge Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Judge Response": {
+      "main": [
+        [
+          {
+            "node": "Respond Judge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}
