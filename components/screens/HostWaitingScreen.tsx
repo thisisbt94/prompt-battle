@@ -42,7 +42,10 @@ function PlayerCard({
           <div className="rounded-[var(--radius-md)] border border-line bg-white p-2">
             <QRCodeCanvas value={joinUrl} size={140} />
           </div>
-          <p className="text-xs text-ink-faint">Scan to join on your phone</p>
+          <p className="text-xs text-ink-faint">Scan, or open this link directly on that device:</p>
+          <p className="max-w-[220px] break-all rounded-full bg-paper px-3 py-1.5 text-xs font-medium text-ink-soft">
+            {joinUrl.replace(/^https?:\/\//, "")}
+          </p>
         </div>
       )}
     </div>
